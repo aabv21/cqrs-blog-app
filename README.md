@@ -1,112 +1,152 @@
 # CQRS Blog Application
 
-A modern blog application implementing the Command Query Responsibility Segregation (CQRS) pattern. This architecture separates read and write operations into distinct services, providing better scalability and maintainability.
+A modern blog platform implementing the **Command Query Responsibility Segregation (CQRS)** pattern with a microservices architecture — separating read and write operations into distinct services for better scalability and maintainability.
 
-## Architecture Overview
-
-The application consists of four main services:
-
-### 1. API Gateway (Port 3000)
-
-- Acts as a reverse proxy and single entry point for all client requests
-- Routes write operations (POST, PUT, DELETE) to the Commands service
-- Routes read operations (GET) to the Queries service
-- Handles cross-cutting concerns like CORS and request logging
-
-### 2. Commands Service (Port 3001)
-
-- Handles all write operations (create/delete posts and comments)
-- Uses MySQL for transactional data storage
-- Publishes events to RabbitMQ when state changes occur
-- Implements strict data validation and business rules
-
-### 3. Queries Service (Port 3002)
-
-- Handles all read operations (fetch posts and comments)
-- Uses MongoDB for optimized read operations
-- Subscribes to RabbitMQ events to maintain data consistency
-- Provides paginated and filtered data access
-
-### 4. UI Service
-
-- React-based frontend application
-- Modern UI components using Shadcn/UI
-- Real-time updates through event-driven architecture
-- Responsive and user-friendly interface
+---
 
 ## Tech Stack
 
-### Backend
+![Node.js](https://img.shields.io/badge/Node.js-339933?style=flat-square&logo=nodedotjs&logoColor=white)
+![TypeScript](https://img.shields.io/badge/TypeScript-3178C6?style=flat-square&logo=typescript&logoColor=white)
+![Express.js](https://img.shields.io/badge/Express.js-000000?style=flat-square&logo=express&logoColor=white)
+![MySQL](https://img.shields.io/badge/MySQL-4479A1?style=flat-square&logo=mysql&logoColor=white)
+![MongoDB](https://img.shields.io/badge/MongoDB-47A248?style=flat-square&logo=mongodb&logoColor=white)
+![RabbitMQ](https://img.shields.io/badge/RabbitMQ-FF6600?style=flat-square&logo=rabbitmq&logoColor=white)
+![React](https://img.shields.io/badge/React-20232A?style=flat-square&logo=react&logoColor=61DAFB)
+![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-06B6D4?style=flat-square&logo=tailwindcss&logoColor=white)
+![Shadcn/UI](https://img.shields.io/badge/shadcn%2Fui-000000?style=flat-square&logo=shadcnui&logoColor=white)
 
-- Node.js
-- TypeScript
-- Express.js
-- MySQL (Commands Service)
-- MongoDB (Queries Service)
-- RabbitMQ (Event Bus)
+---
 
-### Frontend
+## Architecture Overview
 
-- React
-- TypeScript
-- React Router
-- Shadcn/UI
-- Tailwind CSS
+```
+                        ┌─────────────────┐
+                        │   React UI      │
+                        │  (Port 5173)    │
+                        └────────┬────────┘
+                                 │
+                        ┌────────▼────────┐
+                        │   API Gateway   │  ← Single entry point
+                        │   (Port 3000)   │
+                        └────────┬────────┘
+                                 │
+              ┌──────────────────┼──────────────────┐
+              │ Write ops        │                  │ Read ops
+              │ POST/PUT/DELETE  │                  │ GET
+    ┌─────────▼─────────┐       │       ┌───────────▼──────────┐
+    │  Commands Service │       │       │   Queries Service    │
+    │   (Port 3001)     │       │       │    (Port 3002)       │
+    │                   │       │       │                      │
+    │  MySQL (writes)   │──────RabbitMQ─▶  MongoDB (reads)    │
+    └───────────────────┘  events bus   └──────────────────────┘
+```
 
-## Features
+### Services
 
-- Create, read, and delete blog posts
-- Add and delete comments on posts
-- Event-driven architecture for real-time updates
-- Separation of read and write concerns (CQRS)
-- Responsive and modern UI
-- Error handling and validation
-- Logging and monitoring
+**API Gateway** `Port 3000`
+- Single entry point and reverse proxy for all client requests
+- Routes writes → Commands Service, reads → Queries Service
+- Handles CORS and request logging
+
+**Commands Service** `Port 3001`
+- Handles all write operations (create/delete posts and comments)
+- MySQL for transactional data storage with strict validation
+- Publishes domain events to RabbitMQ on every state change
+
+**Queries Service** `Port 3002`
+- Handles all read operations with pagination and filtering
+- MongoDB optimized for fast reads
+- Subscribes to RabbitMQ events to stay in sync with Commands
+
+**UI Service** `Port 5173`
+- React + TypeScript frontend with Shadcn/UI components
+- Event-driven real-time updates
+- Responsive and mobile-friendly
+
+---
+
+## Key Features
+
+- ✍️ **CQRS pattern** — strict read/write model separation
+- 📨 **Event-driven sync** — RabbitMQ keeps read/write models consistent asynchronously
+- 🗄️ **Polyglot persistence** — MySQL for writes, MongoDB for reads
+- 🔀 **API Gateway** — single entry point with intelligent request routing
+- ✅ **Validation** — business rules enforced at the Commands layer
+- 🎨 **Modern UI** — React + Shadcn/UI + Tailwind CSS
+
+---
 
 ## API Endpoints
 
 ### Posts
-
-- `GET /api/posts` - Get all posts (Queries Service)
-- `GET /api/posts/:id` - Get a single post with comments (Queries Service)
-- `POST /api/posts` - Create a new post (Commands Service)
-- `DELETE /api/posts/:id` - Delete a post (Commands Service)
+| Method | Endpoint | Service | Description |
+|---|---|---|---|
+| `GET` | `/api/posts` | Queries | Get all posts |
+| `GET` | `/api/posts/:id` | Queries | Get post with comments |
+| `POST` | `/api/posts` | Commands | Create a new post |
+| `DELETE` | `/api/posts/:id` | Commands | Delete a post |
 
 ### Comments
+| Method | Endpoint | Service | Description |
+|---|---|---|---|
+| `POST` | `/api/posts/:id/comments` | Commands | Add a comment |
+| `DELETE` | `/api/posts/:postId/comments/:commentId` | Commands | Delete a comment |
 
-- `POST /api/posts/:id/comments` - Add a comment to a post (Commands Service)
-- `DELETE /api/posts/:postId/comments/:commentId` - Delete a comment (Commands Service)
+---
 
 ## Getting Started
 
-1. Clone the repository
-2. Install dependencies for each service:
-   ```bash
-   cd api-gateway && npm install
-   cd ../commands && npm install
-   cd ../queries && npm install
-   cd ../ui && npm install
-   ```
-3. Set up your environment variables:
-   - MySQL connection for Commands Service
-   - MongoDB connection for Queries Service
-   - RabbitMQ connection details
-4. Start the services:
+**Prerequisites:** Node.js, MySQL, MongoDB, RabbitMQ
 
-   ```bash
-   # Start each service in a separate terminal
-   cd api-gateway && npm start
-   cd commands && npm start
-   cd queries && npm start
-   cd ui && npm start
-   ```
+```bash
+# Clone the repository
+git clone https://github.com/aabv21/cqrs-blog-app.git
+cd cqrs-blog-app
 
-5. Access the application at `http://localhost:5173`
+# Install dependencies for each service
+cd api-gateway && npm install
+cd ../commands && npm install
+cd ../queries && npm install
+cd ../ui && npm install
+```
 
-## Contributing
+**Environment variables** — create `.env` in each service:
 
-Please read our contributing guidelines before submitting pull requests.
+```env
+# Commands Service
+MYSQL_HOST=localhost
+MYSQL_PORT=3306
+MYSQL_USER=root
+MYSQL_PASSWORD=your_password
+MYSQL_DB=cqrs_commands
+RABBITMQ_URL=amqp://localhost
 
-## License
+# Queries Service
+MONGODB_URL=mongodb://localhost:27017/cqrs_queries
+RABBITMQ_URL=amqp://localhost
+```
 
-This project is licensed under the MIT License - see the LICENSE file for details.
+**Start all services** (each in a separate terminal):
+
+```bash
+cd api-gateway && npm start   # http://localhost:3000
+cd commands && npm start      # http://localhost:3001
+cd queries && npm start       # http://localhost:3002
+cd ui && npm start            # http://localhost:5173
+```
+
+Open [http://localhost:5173](http://localhost:5173) to view the app.
+
+---
+
+## Related Projects
+
+- [photo-post](https://github.com/aabv21/photo-post) — Microservices with Kafka & Redis
+- [microservices-js-node](https://github.com/aabv21/microservices-js-node) — Node.js microservices with Kubernetes
+
+---
+
+<div align="center">
+  <sub>Built by <a href="https://github.com/aabv21">Andrés Buelvas</a> · Full Stack Engineer</sub>
+</div>
